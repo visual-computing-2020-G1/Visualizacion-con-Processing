@@ -1,0 +1,79 @@
+import java.util.stream.*;
+
+PShape map;
+
+int totalCount; // total number of trips
+Trip[] data;
+int tripCount;
+
+
+void setup() {
+  size(800, 800);
+  // The file "bot1.svg" must be in the data folder
+  // of the current sketch to load successfully
+  map = loadShape("map.svg");
+} 
+
+void draw(){
+  background(102);
+   // Disable the colors found in the SVG file
+  map.disableStyle();
+  // Set our own coloring
+  //fill(0, 51, 102);
+  //noStroke();  
+  fill(0, 102, 153);    // Set the SVG fill to blue
+  stroke(255);     
+  shape(map, 40.6444, -73.9174, 800, 800);  // Draw at coordinate (110, 90) at size 100 x 100
+  //shape(map, 280, 40);            // Draw at coordinate (280, 40) at the default size
+}
+
+void readData( ) {
+  String[] lines = loadStrings("JC-201912-citibike-tripdata.txt");
+  data = new Trip[lines.length-1];
+  for (int i = 1; i < lines.length; i++) {
+    data[tripCount] = parseTrip(lines[i]);
+    tripCount++;
+  }
+}
+
+void parseInfo(String line) {
+String infoString = line.substring(2); // remove the #
+String[] infoPieces = split(infoString, ',');
+totalCount = int(infoPieces[0]);
+minX = float(infoPieces[1]);
+maxX = float(infoPieces[2]);
+minY = float(infoPieces[3]);
+maxY = float(infoPieces[4]);
+}
+Trip parseTrip(String line) {
+  String pieces[] = split(line, ',');
+  int duration = int(pieces[0]);
+  Date startTime = parseDate(pieces[1]);
+  Date stopTime = parseDate(pieces[2]);
+  int startStationId = int(pieces[3]);
+  String startStationName = pieces[4];
+  Float startStationLatitude = float(pieces[4]);
+  Float startStationLongitude = float(pieces[5]);
+  int endStationId = int(pieces[6]);
+  String endStationName = pieces[7];
+  Float endStationLatitude = float(pieces[8]);
+  Float endStationLongitude = float(pieces[9]);
+  int bikeId = int(pieces[10]);
+  String userType = pieces[11];
+  int birthYear = int(pieces[12]);
+  int gender= int(pieces[13]);
+  return new Trip(duration, Date startTime, Date stopTime, int startStationId, String startStationName, Float startStationLatitude, Float startStationLongitude, 
+        int endStationId, String endStationName, Float endStationLatitude, Float endStationLongitude, int bikeId, String userType, int birthYear, int gender);
+}
+
+Date parseDate(String stringDate) {
+  try {
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
+    Date date = dateFormat.parse(stringDate);    
+  } 
+    catch(ParseException e) {
+    println(e.getMessage());
+  }
+  return date
+}
+  

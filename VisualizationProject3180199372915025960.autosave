@@ -1,0 +1,81 @@
+import java.util.stream.*;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
+import java.util.List;
+import java.util.Arrays;
+
+PShape map;
+
+int totalCount; // total number of trips
+int tripCount;
+Trip[] data;
+
+Date date = parseDate("2019-12-01 00:07:13.9360");
+
+
+void setup() {
+  size(800, 800, P2D);
+  // The file "bot1.svg" must be in the data folder
+  // of the current sketch to load successfully
+  map = loadShape("map.svg");
+  data = readData();
+  List<Trip> list = new ArrayList<Trip>(Arrays.asList(data));
+  
+} 
+
+void draw(){
+  background(102);
+   // Disable the colors found in the SVG file
+  map.disableStyle();
+  // Set our own coloring
+  //fill(0, 51, 102);
+  //noStroke();  
+  fill(0, 102, 153);    // Set the SVG fill to blue
+  stroke(255);     
+  shape(map, 40.6444, -73.9174, 800, 800);  // Draw at coordinate (110, 90) at size 100 x 100
+  //shape(map, 280, 40);            // Draw at coordinate (280, 40) at the default size
+}
+
+Trip[] readData() {
+  Trip[] data;
+  String[] lines = loadStrings("JC-201912-citibike-tripdata.csv");
+  data = new Trip[lines.length-1];
+  for (int i = 1; i < lines.length; i++) {
+    data[tripCount] = parseTrip(lines[i]);
+    tripCount++;
+  }
+  return data;
+}
+
+Trip parseTrip(String line) {
+  String pieces[] = split(line, ',');    
+  int duration = int(pieces[0]);
+  Date startTime = parseDate(pieces[1].replace("\"", ""));
+  Date stopTime = parseDate(pieces[2].replace("\"", ""));
+  int startStationId = int(pieces[3]);
+  String startStationName = pieces[4].replace("\"", "");
+  Float startStationLatitude = float(pieces[4]);
+  Float startStationLongitude = float(pieces[5]);
+  int endStationId = int(pieces[6]);
+  String endStationName = pieces[7].replace("\"", "");
+  Float endStationLatitude = float(pieces[8]);
+  Float endStationLongitude = float(pieces[9]);
+  int bikeId = int(pieces[10]);
+  String userType = pieces[11].replace("\"", "");
+  int birthYear = int(pieces[12]);
+  int gender= int(pieces[13]);
+  return new Trip(duration, startTime, stopTime, startStationId, startStationName, startStationLatitude, startStationLongitude, 
+        endStationId, endStationName, endStationLatitude, endStationLongitude, bikeId, userType, birthYear, gender);
+}
+
+Date parseDate(String stringDate) {
+  Date date = new Date();
+  try {
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
+    date = dateFormat.parse(stringDate);    
+  }catch(ParseException e) {
+    println(e.getMessage());
+  }
+  return date;
+}
+  
