@@ -9,10 +9,8 @@ String renderer = P2D;
 float mapX1, mapY1;
 float mapX2, mapY2;
 
-Float latUpperLimit = 40.915816;
-Float latLowerLimit = 40.655750;
-Float longLeftLimit = -74.041943;
-Float longRightLimit = -73.701028;
+Float latUpperLimit,latLowerLimit,longLeftLimit,longRightLimit;
+Float mxLongitude,mnLongitude,mxLatitude,mnLatitude;
 
 PShape map;
 
@@ -25,32 +23,67 @@ Map<Integer,Integer> frecuencies = new HashMap<Integer,Integer>();
 List<Integer> stationsAux = new ArrayList<Integer>();
 Integer maxFrecuency;
 Integer minFrecuency;
+Map<Integer,Integer> maxFrecPerHour = new HashMap<Integer,Integer>();
+Map<Integer,Integer> minFrecPerHour = new HashMap<Integer,Integer>();
+ArrayList<Map<Integer,Integer>> frecuenciesPerHour = new ArrayList<Map<Integer,Integer>>();
+
+
+boolean viewFrecuencyPerHour = false;
+int hour;
 
 void setup() {
   PFont font = loadFont("AgencyFB-Reg-14.vlw");
   textFont(font);
+  
+//  map = loadShape("map.svg");
+  data = readData();
+  noRepeatedStations = getStations();
+  frecuencies = getFrecuencies(noRepeatedStations, stationsAux);  
+  maxFrecuency = Collections.max(frecuencies.values());
+  minFrecuency = Collections.min(frecuencies.values());
+  getFrecuenciesPerHour(data,stations);
+  mxLongitude = getMaxLongitude(stations);
+  mnLongitude = getMinLongitude(stations);
+  mxLatitude = getMaxLatitude(stations);
+  mnLatitude = getMinLatitude(stations);
+  latUpperLimit = mxLatitude;
+  latLowerLimit = mnLatitude;
+  longLeftLimit = mnLongitude;
+  longRightLimit = mxLongitude;
+  
+  hour = 0;
   
   size(1050, 1050);
   mapX1 = 50;
   mapX2 = width - mapX1;
   mapY1 = 50;
   mapY2 = height - mapY1;
-  
-  map = loadShape("map.svg");
-  data = readData();
-  noRepeatedStations = getStations();
-  frecuencies = getFrecuencies(noRepeatedStations, stationsAux);  
-  maxFrecuency = Collections.max(frecuencies.values());
-  minFrecuency = Collections.min(frecuencies.values());
 } 
 
 void draw(){
-  background(0);  
-  map.disableStyle();  
-  fill(0);   
-  stroke(255);     
+  if(!viewFrecuencyPerHour){
+    background(0);
+    fill(0);
+    stroke(255);
+    drawStations(frecuencies, stations);
+  }else{
+    if(hour>=0 && hour<=23){      
+      if(frameCount%180==0){
+        background(0);        
+        drawStationsPerHour(stations, hour);
+        hour++;
+      }      
+    }
+  }  
+  
+//  map.disableStyle();       
 //shape(map, mapX1, mapY1, 1050,1050); 
-  drawStations(frecuencies, stations);  
+}
+
+void keyPressed() {  
+  if (key == 'h') {
+    viewFrecuencyPerHour = true;    
+  }
 }
 
 Trip[] readData() {
@@ -137,6 +170,31 @@ Map<Integer,Integer> getFrecuencies(Set<Integer> noRepeatedStations, List<Intege
   return frecuencies;
 }
 
+void getFrecuenciesPerHour(Trip[] trips, List<Station> stations){  
+  for (int i = 0; i < 24; i++) {
+    Map<Integer,Integer> frecuencies = new HashMap<Integer,Integer>();
+    List<Integer> stationsPerHour = new ArrayList<Integer>();
+    for (Trip trip : trips) {
+      int hourStart = (int)(trip.startTime.getTime() % 86400000) / 3600000;      
+      int hourEnd = (int)(trip.startTime.getTime() % 86400000) / 3600000;
+      if (hourStart == i){
+        stationsPerHour.add(trip.startStationId);
+      }
+      if (hourEnd == i){
+        stationsPerHour.add(trip.endStationId);
+      }          
+    }
+    for (Station station : stations) {
+      Integer frecuency = Collections.frequency(stationsPerHour,station.id);    
+      frecuencies.put(station.id,frecuency);       
+    }
+    frecuenciesPerHour.add(frecuencies);    
+    int maxFrecuency = Collections.max(frecuencies.values());
+    maxFrecPerHour.put(i,maxFrecuency);
+    int minFrecuency = Collections.min(frecuencies.values());
+    minFrecPerHour.put(i,minFrecuency);
+  }    
+}
 
 Float coordinateYmapper(Float latitude){
   Float y = 0.0; 
@@ -167,13 +225,85 @@ void drawStations(Map<Integer,Integer> frecuencies, List<Station> stations){
     ellipseMode(RADIUS);
     ellipse(x, y, diameter/2, diameter/2);
     popStyle();
+    pushStyle();
+    fill(255);
+    textAlign(CENTER);      
+    text(station.name, x, y-(diameter/2)-4);
+    popStyle();
+    /*
     if (dist(x, y, mouseX, mouseY) < (diameter/2)+2) {
       pushStyle();
       fill(255);
       textAlign(CENTER);      
       text(station.name, x, y-(diameter/2)-4);
       popStyle();
-    }    
+    }  
+    */
   }
 }
-  
+
+void drawStationsPerHour(List<Station> stations, int hour){  
+  int i = hour;
+   pushStyle();
+   fill(255);
+   textAlign(LEFT);
+   textSize(26);
+   text("Hora: "+ hour + " Hrs", (mapX2 - mapX1)/2, 30);
+   popStyle();         
+        for (Station station : stations) {
+          Integer value = frecuenciesPerHour.get(i).get(station.id);          
+          Float opacity = map(value, minFrecPerHour.get(i), maxFrecPerHour.get(i), 0, 255);
+          Float diameter = map(value, minFrecPerHour.get(i), maxFrecPerHour.get(i), 4, 35);
+          Float x = coordinateXmapper(station.longitude);
+          Float y = coordinateYmapper(station.latitude);
+          pushStyle();
+          fill(255,0,0,opacity); 
+          stroke(255,0,0,opacity);
+          ellipseMode(RADIUS);
+          ellipse(x, y, diameter/2, diameter/2); 
+          textAlign(CENTER);      
+          text(station.name, x, y-(diameter/2)-4);
+          popStyle();               
+        
+  }
+}
+
+Float getMaxLatitude(List<Station> stations){
+  Float maxLatitude = Float.MIN_VALUE;
+  for (Station station : stations) {
+    if (station.latitude > maxLatitude){
+      maxLatitude = station.latitude;
+    }
+  }
+  return maxLatitude;
+}
+
+Float getMinLatitude(List<Station> stations){
+  Float minLatitude = Float.MAX_VALUE;
+  for (Station station : stations) {
+    if (station.latitude < minLatitude){
+      minLatitude = station.latitude;
+    }
+  }
+  return minLatitude;
+}
+
+Float getMaxLongitude(List<Station> stations){
+  Float maxLongitude = -100.0;
+  for (Station station : stations) {
+    if (station.longitude > maxLongitude){
+      maxLongitude = station.longitude;
+    }
+  }
+  return maxLongitude;
+}
+
+Float getMinLongitude(List<Station> stations){
+  Float minLongitude = Float.MAX_VALUE;
+  for (Station station : stations) {
+    if (station.longitude < minLongitude){
+      minLongitude = station.longitude;
+    }
+  }
+  return minLongitude;  
+}
