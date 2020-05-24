@@ -1,3 +1,4 @@
+//Presionar 'H' para ver el comportamiento por horas
 
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
@@ -26,6 +27,7 @@ Integer minFrecuency;
 Map<Integer,Integer> maxFrecPerHour = new HashMap<Integer,Integer>();
 Map<Integer,Integer> minFrecPerHour = new HashMap<Integer,Integer>();
 ArrayList<Map<Integer,Integer>> frecuenciesPerHour = new ArrayList<Map<Integer,Integer>>();
+Map<Integer,Station> mapOfStations;
 
 
 boolean viewFrecuencyPerHour = false;
@@ -38,6 +40,7 @@ void setup() {
 //  map = loadShape("map.svg");
   data = readData();
   noRepeatedStations = getStations();
+  mapOfStations = getStationsMap(stations);  
   frecuencies = getFrecuencies(noRepeatedStations, stationsAux);  
   maxFrecuency = Collections.max(frecuencies.values());
   minFrecuency = Collections.min(frecuencies.values());
@@ -161,6 +164,14 @@ Set<Integer> getStations(){
 return noRepeatedStations;
 }
 
+Map<Integer,Station> getStationsMap(List<Station> stations){
+  Map<Integer,Station> stationsMap = new HashMap<Integer,Station>();
+  for (Station station : stations) {
+    stationsMap.put(station.id,station);
+  }  
+  return stationsMap;
+}
+
 Map<Integer,Integer> getFrecuencies(Set<Integer> noRepeatedStations, List<Integer> stationsAux){
   //Map<Integer,Long> frecuencies = stationsAux.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));  
   for (Integer id : noRepeatedStations) {
@@ -196,6 +207,22 @@ void getFrecuenciesPerHour(Trip[] trips, List<Station> stations){
   }    
 }
 
+Map<Integer,Integer> moreFrecuentDestinations(int stationId){
+    List<Integer> destinations = new ArrayList<Integer>();
+    Map<Integer,Integer> destinationsFrecuencies = new HashMap<Integer,Integer>();
+    for (Trip trip : data) {
+      if(trip.startStationId==stationId){
+        destinations.add(trip.endStationId);
+        destinationsFrecuencies.put(trip.endStationId,0);
+      }
+    }
+    for(Integer endStationId : destinationsFrecuencies.keySet()) {
+      Integer frecuency = Collections.frequency(destinations,endStationId);    
+      destinationsFrecuencies.put(endStationId,frecuency);
+    }
+    return destinationsFrecuencies;
+}
+
 Float coordinateYmapper(Float latitude){
   Float y = 0.0; 
   Float minY = latLowerLimit;
@@ -229,16 +256,25 @@ void drawStations(Map<Integer,Integer> frecuencies, List<Station> stations){
     fill(255);
     textAlign(CENTER);      
     text(station.name, x, y-(diameter/2)-4);
-    popStyle();
-    /*
+    popStyle();    
     if (dist(x, y, mouseX, mouseY) < (diameter/2)+2) {
-      pushStyle();
-      fill(255);
-      textAlign(CENTER);      
-      text(station.name, x, y-(diameter/2)-4);
-      popStyle();
-    }  
-    */
+      Map<Integer,Integer> destinationsFrecuencies = moreFrecuentDestinations(station.id);
+      for(Integer endStationId : destinationsFrecuencies.keySet()) {
+        Station endStation = mapOfStations.get(endStationId);
+        Integer dFrecuency = destinationsFrecuencies.get(endStationId);
+        int maxDfrecuency = Collections.max(destinationsFrecuencies.values());
+        int minDfrecuency = Collections.min(destinationsFrecuencies.values());
+        Float strokeWeight = map(dFrecuency, minDfrecuency, maxDfrecuency, 1, 12);
+        Float opacity = map(dFrecuency, minDfrecuency, maxDfrecuency, 0, 255);
+        Float xDestination = coordinateXmapper(endStation.longitude);
+        Float yDestination = coordinateYmapper(endStation.latitude);
+        pushStyle();
+        strokeWeight(strokeWeight);
+        stroke(0,0,255,opacity);
+        line(x, y, xDestination, yDestination);
+        popStyle();
+      }
+    }      
   }
 }
 
